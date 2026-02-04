@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Box Trap – Beta</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+
+    <!-- ================= DASHBOARD ================= -->
+    <div id="dashboard" class="screen active">
+        <div class="glass">
+            <h1 class="title">BOX TRAP</h1>
+
+            <div class="menu">
+                <button onclick="openMode()">▶ Start</button>
+                <button onclick="openSettings()">⚙ Settings</button>
+                <button onclick="openCredits()">👤 Credits</button>
+            </div>
+        </div>
+    </div>
+    <!-- ================= MODE SELECT ================= -->
+    <div id="modeScreen" class="screen">
+        <div class="glass">
+            <h2>Select Mode</h2>
+
+            <div class="menu">
+                <button onclick="selectMode('human')">👥 Pass & Play</button>
+                <button onclick="selectMode('bot')">🤖 Play vs Bot</button>
+            </div>
+
+            <button class="backBtn" onclick="goHome()">⬅ Back</button>
+        </div>
+    </div>
+
+    <!-- ================= DIFFICULTY SCREEN ================= -->
+    <div id="difficultyScreen" class="screen">
+        <div class="glass">
+            <h2>Select Difficulty</h2>
+
+            <div class="menu">
+                <button onclick="startGameWithDifficulty(3)">☺️ Easy</button>
+                <button onclick="startGameWithDifficulty(4)">💤 Medium</button>
+                <button onclick="startGameWithDifficulty(6)">💀Hard</button>
+            </div>
+
+            <button class="backBtn" onclick="goHome()">⬅ Back</button>
+        </div>
+    </div>
+
+    <!-- ================= GAME SCREEN ================= -->
+    <div id="gameScreen" class="screen">
+        <div class="glass">
+            <h2>BOX TRAP</h2>
+            <div id="info">Player 1 Turn</div>
+
+            <div id="gameWrapper">
+                <canvas id="game" width="400" height="400"></canvas>
+            </div>
+
+            <button class="backBtn" onclick="goHome()">⬅ Back</button>
+        </div>
+    </div>
+
+    <!-- ================= SETTINGS ================= -->
+    <div id="settingsScreen" class="screen">
+        <h2>Settings</h2>
+        <p>(Coming soon)</p>
+        <button class="backBtn" onclick="goHome()">⬅ Back</button>
+    </div>
+
+    <!-- ================= CREDITS ================= -->
+    <div id="creditsScreen" class="screen">
+        <h2>Credits</h2>
+        <p>Game by <b>CREATED BY ONE AND ONLY ROUKMARCO AKA YASH BHAI </b></p>
+        <button class="backBtn" onclick="goHome()">⬅ Back</button>
+    </div>
+    <!-- ================= GAME OVER ================= -->
+    <div id="gameOverScreen" class="screen">
+        <div class="glass">
+            <h2>Game Over</h2>
+
+            <h3 id="winnerText"></h3>
+            <p id="finalScore"></p>
+
+            <button class="menuBtn" onclick="openDifficulty()">🔁 Play Again</button>
+            <button class="menuBtn" onclick="goHome()">🏠 Home</button>
+        </div>
+    </div>
+
+    <script>
+        /* =========================
+                                                                                                                                                                                                                                                                                                                   CONFIG
+                                                                                                                                                                                                                                                                                                                ========================= */
+        let gameMode = "human"; // "human" or "bot"
+
+        let GRID = 4;
+        const DOT_GAP = 80;
+        const OFFSET = 40;
+
+        /* =========================
+           CANVAS
+        ========================= */
+
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+
+        /* =========================
+           IMAGE LOADING (IMPORTANT)
+        ========================= */
+        const blueImg = new Image();
+        const redImg = new Image();
+
+        /* 🔴 CHANGE IMAGE PATHS HERE 🔴 */
+        blueImg.src = "blueim.jpeg";
+        redImg.src = "redimg.jpeg";
+
+        /* wait until images load */
+        let loaded = 0;
+        blueImg.onload = imageReady;
+        redImg.onload = imageReady;
+
+        function imageReady() {
+            loaded++;
+            if (loaded === 2) {
+                drawBoard();
+                updateInfo();
+            }
+        }
+
+        /* =========================
+           GAME STATE
+        ========================= */
+        let currentPlayer = 1;
+        let scores = {
+            1: 0,
+            2: 0
+        };
+
+        let hLines = [];
+        let vLines = [];
+        let boxes = [];
+
+        /* =========================
+           INIT GRID
+        ========================= */
+        for (let i = 0; i <= GRID; i++) {
+            hLines[i] = [];
+            vLines[i] = [];
+            boxes[i] = [];
+            for (let j = 0; j <= GRID; j++) {
+                hLines[i][j] = false;
+                vLines[i][j] = false;
+                boxes[i][j] = 0;
+            }
+        }
+
+        /* =========================
+           DRAW BOARD
+        ========================= */
+        function drawBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.lineWidth = 4;
+            ctx.lineCap = "round";
+            ctx.strokeStyle = "#222";
+
+            /* dots */
+            for (let i = 0; i <= GRID; i++) {
+                for (let j = 0; j <= GRID; j++) {
+                    ctx.beginPath();
+                    ctx.arc(
+                        OFFSET + j * DOT_GAP,
+                        OFFSET + i * DOT_GAP,
+                        5, 0, Math.PI * 2
+                    );
+                    ctx.fillStyle = "#222";
+                    ctx.fill();
+                }
+            }
+
+            // ================= DRAW HORIZONTAL LINES =================
+            for (let i = 0; i <= GRID; i++) {
+                for (let j = 0; j < GRID; j++) {
+                    if (hLines[i][j]) {
+                        ctx.beginPath();
+                        ctx.moveTo(
+                            OFFSET + j * DOT_GAP,
+                            OFFSET + i * DOT_GAP
+                        );
+                        ctx.lineTo(
+                            OFFSET + (j + 1) * DOT_GAP,
+                            OFFSET + i * DOT_GAP
+                        );
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // ================= DRAW VERTICAL LINES =================
+            for (let i = 0; i < GRID; i++) {
+                for (let j = 0; j <= GRID; j++) {
+                    if (vLines[i][j]) {
+                        ctx.beginPath();
+                        ctx.moveTo(
+                            OFFSET + j * DOT_GAP,
+                            OFFSET + i * DOT_GAP
+                        );
+                        ctx.lineTo(
+                            OFFSET + j * DOT_GAP,
+                            OFFSET + (i + 1) * DOT_GAP
+                        );
+                        ctx.stroke();
+                    }
+                }
+            }
+
+
+            /* PERMANENT BOX IMAGES */
+            for (let i = 0; i < GRID; i++) {
+                for (let j = 0; j < GRID; j++) {
+                    if (boxes[i][j]) {
+                        const x = OFFSET + j * DOT_GAP + 5;
+                        const y = OFFSET + i * DOT_GAP + 5;
+                        const size = DOT_GAP - 10;
+
+                        /* subtle tint */
+                        ctx.fillStyle =
+                            boxes[i][j] === 1 ?
+                            "rgba(0,180,255,0.15)" :
+                            "rgba(255,80,80,0.15)";
+                        ctx.fillRect(x, y, size, size);
+
+                        /* image stays permanently */
+                        const img = boxes[i][j] === 1 ? blueImg : redImg;
+                        ctx.drawImage(img, x, y, size, size);
+                    }
+                }
+            }
+        }
+
+        /* =========================
+           INPUT
+        ========================= */
+        canvas.addEventListener("click", (e) => {
+
+            // Block clicks during bot turn
+            if (gameMode === "bot" && currentPlayer === 2) return;
+
+            const x = e.offsetX;
+            const y = e.offsetY;
+
+            // ================= HORIZONTAL LINES =================
+            for (let i = 0; i <= GRID; i++) {
+                for (let j = 0; j < GRID; j++) {
+
+                    const lineY = OFFSET + i * DOT_GAP;
+                    const startX = OFFSET + j * DOT_GAP;
+                    const endX = OFFSET + (j + 1) * DOT_GAP;
+
+                    if (
+                        Math.abs(y - lineY) < 10 &&
+                        x > startX &&
+                        x < endX &&
+                        !hLines[i][j]
+                    ) {
+                        hLines[i][j] = true;
+                        handleBoxCheck();
+                        return;
+                    }
+                }
+            }
+
+            // ================= VERTICAL LINES =================
+            for (let i = 0; i < GRID; i++) {
+                for (let j = 0; j <= GRID; j++) {
+
+                    const lineX = OFFSET + j * DOT_GAP;
+                    const startY = OFFSET + i * DOT_GAP;
+                    const endY = OFFSET + (i + 1) * DOT_GAP;
+
+                    if (
+                        Math.abs(x - lineX) < 10 &&
+                        y > startY &&
+                        y < endY &&
+                        !vLines[i][j]
+                    ) {
+                        vLines[i][j] = true;
+                        handleBoxCheck();
+                        return;
+                    }
+                }
+            }
+        });
+
+        /* =========================
+           BOX CHECK
+        ========================= */
+        function handleBoxCheck() {
+            let scored = false;
+
+            for (let i = 0; i < GRID; i++) {
+                for (let j = 0; j < GRID; j++) {
+                    if (!boxes[i][j] &&
+                        hLines[i][j] &&
+                        hLines[i + 1][j] &&
+                        vLines[i][j] &&
+                        vLines[i][j + 1]
+                    ) {
+                        boxes[i][j] = currentPlayer;
+                        scores[currentPlayer]++;
+                        scored = true;
+                    }
+                }
+            }
+
+            if (!scored) {
+                currentPlayer = currentPlayer === 1 ? 2 : 1;
+            }
+
+            drawBoard();
+            updateInfo();
+            checkGameOver();
+            // Bot move if needed
+            if (gameMode === "bot" && currentPlayer === 2) {
+                setTimeout(botMove, 600);
+            }
+
+
+
+        }
+
+        function botMove() {
+
+            // 1️⃣ Collect all possible moves
+            let possibleMoves = [];
+
+            for (let i = 0; i <= GRID; i++) {
+                for (let j = 0; j < GRID; j++) {
+                    if (!hLines[i][j]) {
+                        possibleMoves.push({
+                            type: "h",
+                            i,
+                            j
+                        });
+                    }
+                }
+            }
+
+            for (let i = 0; i < GRID; i++) {
+                for (let j = 0; j <= GRID; j++) {
+                    if (!vLines[i][j]) {
+                        possibleMoves.push({
+                            type: "v",
+                            i,
+                            j
+                        });
+                    }
+                }
+            }
+
+            // 2️⃣ Try to COMPLETE a box (999 IQ move)
+            for (const move of possibleMoves) {
+                if (createsBox(move)) {
+                    applyMove(move);
+                    handleBoxCheck();
+                    return;
+                }
+            }
+
+            // 3️⃣ Avoid giving box to opponent (VERY IMPORTANT)
+            const safeMoves = possibleMoves.filter(m => !createsThirdSide(m));
+
+            if (safeMoves.length > 0) {
+                const move = safeMoves[Math.floor(Math.random() * safeMoves.length)];
+                applyMove(move);
+                handleBoxCheck();
+                return;
+            }
+
+            // 4️⃣ No safe move → sacrifice smallest damage
+            const move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+            applyMove(move);
+            handleBoxCheck();
+        }
+
+        function applyMove(move) {
+            if (move.type === "h") {
+                hLines[move.i][move.j] = true;
+            } else {
+                vLines[move.i][move.j] = true;
+            }
+        }
+
+        // Check if move completes a box
+        function createsBox(move) {
+            let completed = false;
+            simulateMove(move, () => {
+                for (let i = 0; i < GRID; i++) {
+                    for (let j = 0; j < GRID; j++) {
+                        if (!boxes[i][j] &&
+                            hLines[i][j] &&
+                            hLines[i + 1][j] &&
+                            vLines[i][j] &&
+                            vLines[i][j + 1]
+                        ) {
+                            completed = true;
+                        }
+                    }
+                }
+            });
+            return completed;
+        }
+
+        // Check if move creates a 3-sided box (danger)
+        function createsThirdSide(move) {
+            let danger = false;
+            simulateMove(move, () => {
+                for (let i = 0; i < GRID; i++) {
+                    for (let j = 0; j < GRID; j++) {
+                        if (!boxes[i][j]) {
+                            let sides = 0;
+                            if (hLines[i][j]) sides++;
+                            if (hLines[i + 1][j]) sides++;
+                            if (vLines[i][j]) sides++;
+                            if (vLines[i][j + 1]) sides++;
+
+                            if (sides === 3) danger = true;
+                        }
+                    }
+                }
+            });
+            return danger;
+        }
+
+        // Temporarily simulate a move
+        function simulateMove(move, callback) {
+            if (move.type === "h") {
+                hLines[move.i][move.j] = true;
+                callback();
+                hLines[move.i][move.j] = false;
+            } else {
+                vLines[move.i][move.j] = true;
+                callback();
+                vLines[move.i][move.j] = false;
+            }
+        }
+
+
+
+        function checkGameOver() {
+            let totalBoxes = GRID * GRID;
+            let claimed = scores[1] + scores[2];
+
+            if (claimed === totalBoxes) {
+                showGameOver();
+            }
+        }
+
+        /* =========================
+           TURN INFO
+        ========================= */
+        function updateInfo() {
+            const info = document.getElementById("info");
+            info.innerText = `Player ${currentPlayer} Turn | Blue ${scores[1]} : Red ${scores[2]}`;
+            info.style.background =
+                currentPlayer === 1 ? "#005eff" : "#d92b2b";
+        }
+        /* =====================
+   SCREEN CONTROL
+===================== */
+        function showGameOver() {
+            const winnerText = document.getElementById("winnerText");
+            const finalScore = document.getElementById("finalScore");
+
+            if (scores[1] > scores[2]) {
+                winnerText.innerText = "🏆 Blue Wins!";
+            } else if (scores[2] > scores[1]) {
+                winnerText.innerText = "🏆 Red Wins!";
+            } else {
+                winnerText.innerText = "🤝 It's a Draw!";
+            }
+
+            finalScore.innerText = `Blue ${scores[1]} : Red ${scores[2]}`;
+
+            showScreen("gameOverScreen");
+        }
+
+        function openDifficulty() {
+            showScreen("difficultyScreen");
+        }
+
+        function openMode() {
+            showScreen("modeScreen");
+        }
+
+        function selectMode(mode) {
+            gameMode = mode;
+            openDifficulty();
+        }
+
+
+        function showScreen(id) {
+            document.querySelectorAll(".screen").forEach(s => {
+                s.classList.remove("active");
+            });
+            document.getElementById(id).classList.add("active");
+        }
+
+
+        function openSettings() {
+            showScreen("settingsScreen");
+        }
+
+        function openCredits() {
+            showScreen("creditsScreen");
+        }
+
+        function goHome() {
+            showScreen("dashboard");
+        }
+
+        function resetGame() {
+            currentPlayer = 1;
+            scores = {
+                1: 0,
+                2: 0
+            };
+
+            hLines = [];
+            vLines = [];
+            boxes = [];
+
+            for (let i = 0; i <= GRID; i++) {
+                hLines[i] = [];
+                vLines[i] = [];
+                boxes[i] = [];
+                for (let j = 0; j <= GRID; j++) {
+                    hLines[i][j] = false;
+                    vLines[i][j] = false;
+                    boxes[i][j] = 0;
+                }
+            }
+
+            // Resize canvas dynamically
+            const size = OFFSET * 2 + GRID * DOT_GAP;
+            canvas.width = size;
+            canvas.height = size;
+
+            updateInfo();
+            drawBoard();
+        }
+
+        function startGameWithDifficulty(size) {
+            GRID = size;
+            resetGame();
+            showScreen("gameScreen");
+
+        }
+        // ================= PARTICLE BACKGROUND =================
+        const bgCanvas = document.getElementById("bgParticles");
+        const bgCtx = bgCanvas.getContext("2d");
+
+        function resizeBg() {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+        }
+        window.addEventListener("resize", resizeBg);
+        resizeBg();
+
+        const particles = [];
+        const PARTICLE_COUNT = 80;
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            particles.push({
+                x: Math.random() * bgCanvas.width,
+                y: Math.random() * bgCanvas.height,
+                r: Math.random() * 2 + 1,
+                vx: (Math.random() - 0.5) * 0.3,
+                vy: (Math.random() - 0.5) * 0.3,
+                alpha: Math.random() * 0.5 + 0.2
+            });
+        }
+    </script>
+
+</body>
+
+</html>
